@@ -1,22 +1,35 @@
+server:
+  port: 8080
+  tomcat:
+    threads:
+      max: 500
+      min-spare: 100
+    accept-count: 200
+
 spring:
   application:
     name: seckill
-
   data:
     redis:
       host: localhost
       port: 6379
-
+      lettuce:
+        pool:
+          max-active: 500
+          max-idle: 100
+          min-idle: 50
+          max-wait: 1000ms
   datasource:
     url: jdbc:mysql://localhost:3306/seckill?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
     username: root
     password: IboTxData5566
     driver-class-name: com.mysql.cj.jdbc.Driver
-
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: false
 
-server:
-  port: 8081
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: seckill-producer

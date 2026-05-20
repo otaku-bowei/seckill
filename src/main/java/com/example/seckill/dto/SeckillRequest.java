@@ -1,6 +1,7 @@
 package com.example.seckill.dto;
 
 public class SeckillRequest {
+
     private Long userId;
     private Long skuId;
     private Integer quantity = 1;

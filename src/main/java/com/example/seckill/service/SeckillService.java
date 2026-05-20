@@ -3,8 +3,10 @@ package com.example.seckill.service;
 import com.example.seckill.constant.GlobalConstants;
 import com.example.seckill.constant.LogCode;
 import com.example.seckill.constant.LogUtils;
+import com.example.seckill.dto.OrderMessage;
 import com.example.seckill.dto.SeckillRequest;
 import com.example.seckill.dto.SeckillResponse;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -18,6 +20,9 @@ public class SeckillService {
 
     @Autowired
     private StringRedisTemplate redisTemplate;
+
+    @Autowired
+    private RocketMQTemplate rocketMQTemplate;
 
     public SeckillResponse seckill(SeckillRequest request) {
         Long userId = request.getUserId();
@@ -49,7 +54,27 @@ public class SeckillService {
         }
 
         if (result == 1) {
+            // 生成订单号
             String orderNo = generateOrderNo(userId, skuId);
+            
+            // 构建订单消息
+            OrderMessage orderMessage = OrderMessage.builder()
+                    .orderNo(orderNo)
+                    .userId(userId)
+                    .skuId(skuId)
+                    .quantity(quantity)
+                    .status("PENDING")
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+
+            // 发送 MQ 消息（异步落库）
+            try {
+                rocketMQTemplate.convertAndSend("seckill-order", orderMessage);
+                LogUtils.log(LogCode.S005, orderNo);
+            } catch (Exception e) {
+                System.out.println("MQ 发送失败: " + e.getMessage());
+            }
+
             LogUtils.log(LogCode.S002, userId);
             return new SeckillResponse(200, "抢购成功", orderNo);
         }
@@ -68,7 +93,6 @@ public class SeckillService {
     }
 
     private String generateOrderNo(Long userId, Long skuId) {
-        return String.format("%d%d-%s", userId, skuId,
-                System.currentTimeMillis());
+        return String.format("%d%d-%d", userId, skuId, System.currentTimeMillis());
     }
 }

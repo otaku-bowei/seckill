@@ -6,6 +6,7 @@ public enum LogCode {
     S002("S002", "seckill success user_id={}", LogLevel.INFO),
     S003("S003", "seckill no_stock sku_id={}", LogLevel.WARN),
     S004("S004", "seckill already_bought user_id={}", LogLevel.WARN),
+    S005("S005", "seckill order_created order_no={}", LogLevel.INFO),
     E001("E001", "seckill_error user_id={}", LogLevel.ERROR);
 
     private final String code;
