@@ -6,9 +6,13 @@
   <component name="ChangeListManager">
     <list default="true" id="b2d46b7f-4e2e-42b3-ac05-934577f4215b" name="Changes" comment="#comment 秒杀系统">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/seckill/constant/GlobalConstants.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/seckill/constant/GlobalConstants.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/seckill/dto/SeckillRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/seckill/dto/SeckillRequest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/seckill/service/SeckillService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/seckill/service/SeckillService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/example/seckill/SeckillConcurrencyTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/example/seckill/SeckillConcurrencyTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/example/seckill/SeckillSETNXTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/example/seckill/SeckillSETNXTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,7 +44,8 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "JUnit.SeckillConcurrencyTest.testConcurrentSeckill.executor": "Run",
+    "JUnit.SeckillConcurrencyTest.testConcurrentSeckill.executor": "Debug",
+    "JUnit.SeckillFullFlowTest.executor": "Debug",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
@@ -54,7 +59,7 @@
     "settings.editor.selected.configurable": "configurable.group.appearance"
   }
 }]]></component>
-  <component name="RunManager" selected="JUnit.SeckillConcurrencyTest.testConcurrentSeckill">
+  <component name="RunManager" selected="JUnit.SeckillFullFlowTest">
     <configuration name="SeckillConcurrencyTest.testConcurrentSeckill" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="seckill" />
       <extension name="coverage">
@@ -67,6 +72,21 @@
       <option name="MAIN_CLASS_NAME" value="com.example.seckill.SeckillConcurrencyTest" />
       <option name="METHOD_NAME" value="testConcurrentSeckill" />
       <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SeckillFullFlowTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="seckill" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.example.seckill.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.example.seckill" />
+      <option name="MAIN_CLASS_NAME" value="com.example.seckill.SeckillFullFlowTest" />
+      <option name="TEST_OBJECT" value="class" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -87,6 +107,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="JUnit.SeckillFullFlowTest" />
         <item itemvalue="JUnit.SeckillConcurrencyTest.testConcurrentSeckill" />
         <item itemvalue="Spring Boot.SeckillApplication" />
       </list>
@@ -123,7 +144,15 @@
       <option name="project" value="LOCAL" />
       <updated>1779279979397</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="#comment 秒杀系统">
+      <option name="closed" value="true" />
+      <created>1779430443879</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1779430443879</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">

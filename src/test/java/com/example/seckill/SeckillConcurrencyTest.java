@@ -198,7 +198,7 @@ public class SeckillConcurrencyTest {
         SeckillResponse response = seckillService.seckill(request);
         assertEquals(200, response.getCode(), "抢购应该成功");
         
-        String orderNo = response.getOrderNo();
+        String orderNo = response.getData();
         assertNotNull(orderNo, "应该返回订单号");
         
         // 等待 MQ 消费者处理（异步落库）
@@ -239,7 +239,7 @@ public class SeckillConcurrencyTest {
             
             SeckillResponse response = seckillService.seckill(request);
             if (response.getCode() == 200) {
-                orderNos[successCount] = response.getOrderNo();
+                orderNos[successCount] = response.getData();
                 successCount++;
             }
         }

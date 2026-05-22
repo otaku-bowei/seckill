@@ -44,7 +44,7 @@ public class SeckillSETNXTest {
         SeckillResponse response = seckillServiceSETNX.seckillBySETNX(request);
 
         assertEquals(200, response.getCode());
-        assertNotNull(response.getOrderNo());
+        assertNotNull(response.getData());
     }
 
     /**

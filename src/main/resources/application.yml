@@ -33,3 +33,11 @@ rocketmq:
   name-server: localhost:9876
   producer:
     group: seckill-producer
+    send-msg-timeout: 3000
+    retry-times-when-send-async-failed: 2
+    max-message-size: 1048576
+
+# 日志
+logging:
+  level:
+    org.apache.rocketmq: INFO

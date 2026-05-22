@@ -5,30 +5,30 @@ public final class GlobalConstants {
     private GlobalConstants() {
     }
 
-    // Redis keys
-    public static final String SKU_STOCK_KEY = "sku:stock:";
-    public static final String USER_BUY_KEY = "user:buy:";
-    public static final String ACTIVITY_KEY = "activity:";
+    // Redis keys (带Hash Tag解决集群问题)
+    public static final String SKU_STOCK_KEY = "{seckill}:stock:";
+    public static final String USER_BUY_KEY = "{seckill}:user:";
+    public static final String ACTIVITY_KEY = "{seckill}:activity:";
 
     // Lua script for atomic stock deduction
     public static final String STOCK_DEDUCT_SCRIPT = """
-        local key = KEYS[1] 
-        local user_key = KEYS[2]
-        local quantity = tonumber(ARGV[1])
-        local user_id = ARGV[2]
-        local max_per_user = tonumber(ARGV[3])
+        local stock_key = '{' .. KEYS[1] .. '}:stock:' .. ARGV[1]
+        local user_key = '{' .. KEYS[1] .. '}:user:' .. ARGV[1] .. ':' .. ARGV[2]
         
+        -- 检查用户是否已抢购
         if redis.call('EXISTS', user_key) > 0 then
             return -1
         end
         
-        local stock = redis.call('GET', key)
-        if not stock or tonumber(stock) < quantity then
+        -- 检查库存
+        local stock = redis.call('GET', stock_key)
+        if not stock or tonumber(stock) < tonumber(ARGV[3]) then
             return -2
         end
         
-        redis.call('DECRBY', key, quantity)
-        redis.call('SET', user_key, quantity, 'EX', 86400)
+        -- 扣减库存并设置用户标记
+        redis.call('DECRBY', stock_key, tonumber(ARGV[3]))
+        redis.call('SET', user_key, ARGV[3], 'EX', 86400)
         
         return 1
         """;
