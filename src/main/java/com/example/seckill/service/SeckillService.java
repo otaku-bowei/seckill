@@ -6,17 +6,19 @@ import com.example.seckill.constant.LogUtils;
 import com.example.seckill.dto.OrderMessage;
 import com.example.seckill.dto.SeckillRequest;
 import com.example.seckill.dto.SeckillResponse;
+import com.example.seckill.entity.Order;
+import com.example.seckill.repository.OrderRepository;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 秒杀服务 - 使用本地模式跳过MQ
- * 如果MQ连不上，订单会直接记录不发送
+ * 秒杀服务 - 直接落库，跳过MQ
  */
 @Service
 public class SeckillService {
@@ -27,8 +29,8 @@ public class SeckillService {
     @Autowired
     private RedissonClient redissonClient;
 
-    // 是否启用MQ（由于MQ认证问题，暂时禁用）
-    private static final boolean MQ_ENABLED = false;
+    @Autowired
+    private OrderRepository orderRepository;
 
     private static final String LOCK_PREFIX = "seckill:lock:";
     private static final long WAIT_TIME = 3;
@@ -99,51 +101,44 @@ public class SeckillService {
         }
 
         if (result == 1L) {
-            return createAndSendOrder(userId, skuId, quantity);
+            return createAndSaveOrder(userId, skuId, quantity);
         }
 
         return new SeckillResponse(500, "系统错误");
     }
 
-    private SeckillResponse createAndSendOrder(Long userId, Long skuId, Integer quantity) {
+    private SeckillResponse createAndSaveOrder(Long userId, Long skuId, Integer quantity) {
         String orderNo = generateOrderNo(userId, skuId);
 
-        OrderMessage orderMessage = OrderMessage.builder()
+        // 直接保存到数据库
+        Order order = Order.builder()
                 .orderNo(orderNo)
                 .userId(userId)
                 .skuId(skuId)
                 .quantity(quantity)
-                .status("PENDING")
-                .timestamp(System.currentTimeMillis())
+                .status("SUCCESS")
+                .createdAt(LocalDateTime.now())
                 .build();
 
-        // 记录订单（由于MQ认证问题，这里直接记录日志）
-        saveOrder(orderMessage);
+        orderRepository.save(order);
+        
+        System.out.println("[订单落库成功] orderNo=" + orderNo + ", userId=" + userId + ", skuId=" + skuId);
 
         LogUtils.log(LogCode.S002, userId);
         return new SeckillResponse(200, "抢购成功", orderNo);
-    }
-
-    private void saveOrder(OrderMessage orderMessage) {
-        // 由于MQ认证暂时有问题，跳过MQ发送，直接记录到日志
-        System.out.println("[订单已创建] orderNo=" + orderMessage.getOrderNo() + 
-                       ", userId=" + orderMessage.getUserId() + 
-                       ", skuId=" + orderMessage.getSkuId() +
-                       ", status=" + orderMessage.getStatus());
-        
-        if (MQ_ENABLED) {
-            // TODO: MQ认证配置好后启用
-            // sendMQMessage(orderMessage);
-        } else {
-            System.out.println("[提示] MQ已禁用，订单仅记录到日志");
-        }
     }
 
     private String generateOrderNo(Long userId, Long skuId) {
         return String.format("%d%d-%d", userId, skuId, System.currentTimeMillis());
     }
 
+    @Autowired
+    private ReconcileService reconcileService;
+
     public void initStock(Long skuId, Integer stock) {
+        // 记录初始库存（用于对账）
+        reconcileService.recordInitialStock(skuId, stock);
+        // 初始化可销售库存
         String stockKey = GlobalConstants.SKU_STOCK_KEY + skuId;
         redisTemplate.opsForValue().set(stockKey, String.valueOf(stock));
     }

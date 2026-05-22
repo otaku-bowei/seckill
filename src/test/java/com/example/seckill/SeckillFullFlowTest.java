@@ -66,7 +66,7 @@ public class SeckillFullFlowTest {
     public void testSuccessFlowWithDB() throws InterruptedException {
         System.out.println("\n===== 测试一：成功抢购 + 订单落库 =====");
         
-        Long userId = 10001L;
+        Long userId = 101L;
         SeckillRequest request = new SeckillRequest();
         request.setUserId(userId);
         request.setSkuId(TEST_SKU_ID);

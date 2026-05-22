@@ -6,13 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="b2d46b7f-4e2e-42b3-ac05-934577f4215b" name="Changes" comment="#comment 秒杀系统">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/seckill/constant/GlobalConstants.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/seckill/constant/GlobalConstants.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/seckill/dto/SeckillRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/seckill/dto/SeckillRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/seckill/controller/SeckillController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/seckill/controller/SeckillController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/seckill/repository/OrderRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/seckill/repository/OrderRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/seckill/service/SeckillService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/seckill/service/SeckillService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/example/seckill/SeckillConcurrencyTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/example/seckill/SeckillConcurrencyTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/example/seckill/SeckillSETNXTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/example/seckill/SeckillSETNXTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/example/seckill/SeckillFullFlowTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/example/seckill/SeckillFullFlowTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,24 +39,25 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "JUnit.SeckillConcurrencyTest.testConcurrentSeckill.executor": "Debug",
-    "JUnit.SeckillFullFlowTest.executor": "Debug",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "Spring Boot.SeckillApplication.executor": "Debug",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Volumes/zhitai2/git/Java/seckill",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2",
-    "settings.editor.selected.configurable": "configurable.group.appearance"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;JUnit.SeckillConcurrencyTest.testConcurrentSeckill.executor&quot;: &quot;Debug&quot;,
+    &quot;JUnit.SeckillFullFlowTest.executor&quot;: &quot;Debug&quot;,
+    &quot;JUnit.SeckillFullFlowTest.testSuccessFlowWithDB.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;Spring Boot.SeckillApplication.executor&quot;: &quot;Debug&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Volumes/zhitai2/git/Java/seckill&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;configurable.group.appearance&quot;
   }
-}]]></component>
-  <component name="RunManager" selected="JUnit.SeckillFullFlowTest">
+}</component>
+  <component name="RunManager" selected="JUnit.SeckillFullFlowTest.testSuccessFlowWithDB">
     <configuration name="SeckillConcurrencyTest.testConcurrentSeckill" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="seckill" />
       <extension name="coverage">
@@ -91,6 +89,22 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="SeckillFullFlowTest.testSuccessFlowWithDB" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="seckill" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.example.seckill.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.example.seckill" />
+      <option name="MAIN_CLASS_NAME" value="com.example.seckill.SeckillFullFlowTest" />
+      <option name="METHOD_NAME" value="testSuccessFlowWithDB" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="SeckillApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" temporary="true" nameIsGenerated="true">
       <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UnknownPolicyInFreeMode" />
       <module name="seckill" />
@@ -107,6 +121,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="JUnit.SeckillFullFlowTest.testSuccessFlowWithDB" />
         <item itemvalue="JUnit.SeckillFullFlowTest" />
         <item itemvalue="JUnit.SeckillConcurrencyTest.testConcurrentSeckill" />
         <item itemvalue="Spring Boot.SeckillApplication" />
@@ -152,7 +167,15 @@
       <option name="project" value="LOCAL" />
       <updated>1779430443879</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="#comment 秒杀系统">
+      <option name="closed" value="true" />
+      <created>1779436552528</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1779436552528</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
