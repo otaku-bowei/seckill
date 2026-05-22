@@ -3,6 +3,8 @@ package com.example.seckill;
 import com.example.seckill.constant.GlobalConstants;
 import com.example.seckill.dto.SeckillRequest;
 import com.example.seckill.dto.SeckillResponse;
+import com.example.seckill.entity.Order;
+import com.example.seckill.repository.OrderRepository;
 import com.example.seckill.service.SeckillService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,9 @@ public class SeckillConcurrencyTest {
 
     @Autowired
     private StringRedisTemplate redisTemplate;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     private static final Long TEST_SKU_ID = 999L;
     private static final int INIT_STOCK = 10000;      // 初始库存
@@ -57,6 +62,7 @@ public class SeckillConcurrencyTest {
      */
     @Test
     public void testConcurrentSeckill() throws InterruptedException {
+//        int totalRequests = THREAD_COUNT * 1000;  // 100000 个请求
         int totalRequests = THREAD_COUNT * 10;  // 1000 个请求
         CountDownLatch latch = new CountDownLatch(totalRequests);
         AtomicInteger successCount = new AtomicInteger(0);
@@ -170,6 +176,88 @@ public class SeckillConcurrencyTest {
                 assertEquals(402, response.getCode(), "第3次应该售罄");
             }
         }
+    }
+
+    /**
+     * 全流程集成测试 - 包含数据库落库
+     * 验证：抢购成功 → MQ消息 → 订单落库
+     */
+    @Test
+    public void testFullFlowIntegration() throws InterruptedException {
+        // 确保测试数据干净
+        redisTemplate.delete(GlobalConstants.SKU_STOCK_KEY + TEST_SKU_ID);
+        seckillService.initStock(TEST_SKU_ID, 10);
+        
+        // 抢购成功
+        Long userId = 40000L;
+        SeckillRequest request = new SeckillRequest();
+        request.setUserId(userId);
+        request.setSkuId(TEST_SKU_ID);
+        request.setQuantity(1);
+        
+        SeckillResponse response = seckillService.seckill(request);
+        assertEquals(200, response.getCode(), "抢购应该成功");
+        
+        String orderNo = response.getOrderNo();
+        assertNotNull(orderNo, "应该返回订单号");
+        
+        // 等待 MQ 消费者处理（异步落库）
+        Thread.sleep(3000);
+        
+        // 验证数据库落库
+        Order order = orderRepository.findByOrderNo(orderNo).orElse(null);
+        assertNotNull(order, "订单应该已落库");
+        assertEquals(userId, order.getUserId(), "用户ID应该匹配");
+        assertEquals(TEST_SKU_ID, order.getSkuId(), "商品ID应该匹配");
+        assertEquals("SUCCESS", order.getStatus(), "订单状态应该是SUCCESS");
+        
+        System.out.println("========== 全流程测试通过 ==========");
+        System.out.println("订单号: " + orderNo);
+        System.out.println("用户ID: " + userId);
+        System.out.println("商品ID: " + TEST_SKU_ID);
+    }
+
+    /**
+     * 批量全流程测试 - 验证多笔订单落库
+     */
+    @Test
+    public void testBatchFullFlow() throws InterruptedException {
+        // 确保测试数据干净
+        redisTemplate.delete(GlobalConstants.SKU_STOCK_KEY + TEST_SKU_ID);
+        seckillService.initStock(TEST_SKU_ID, 5);
+        
+        int successCount = 0;
+        String[] orderNos = new String[5];
+        
+        // 5个不同用户抢购
+        for (int i = 0; i < 5; i++) {
+            Long userId = 50000L + i;
+            SeckillRequest request = new SeckillRequest();
+            request.setUserId(userId);
+            request.setSkuId(TEST_SKU_ID);
+            request.setQuantity(1);
+            
+            SeckillResponse response = seckillService.seckill(request);
+            if (response.getCode() == 200) {
+                orderNos[successCount] = response.getOrderNo();
+                successCount++;
+            }
+        }
+        
+        assertEquals(5, successCount, "应该有5个成功");
+        
+        // 等待 MQ 消费者处理
+        Thread.sleep(5000);
+        
+        // 验证所有订单都已落库
+        for (String orderNo : orderNos) {
+            Order order = orderRepository.findByOrderNo(orderNo).orElse(null);
+            assertNotNull(order, "订单 " + orderNo + " 应该已落库");
+            assertEquals("SUCCESS", order.getStatus());
+        }
+        
+        System.out.println("========== 批量全流程测试通过 ==========");
+        System.out.println("成功订单数: " + successCount);
     }
 
     /**

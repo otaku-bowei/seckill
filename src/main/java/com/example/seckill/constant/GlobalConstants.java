@@ -12,7 +12,7 @@ public final class GlobalConstants {
 
     // Lua script for atomic stock deduction
     public static final String STOCK_DEDUCT_SCRIPT = """
-        local key = KEYS[1]
+        local key = KEYS[1] 
         local user_key = KEYS[2]
         local quantity = tonumber(ARGV[1])
         local user_id = ARGV[2]
