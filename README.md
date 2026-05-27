@@ -1,196 +1,165 @@
 # 秒杀系统
 
-支持 **100,000 TPS** 的高性能秒杀系统，基于 Redis + Lua 原子操作 + RocketMQ 异步落库实现。
+支持 **100,000 QPS** 的高性能秒杀系统，当前版本为基础实现，具备以下能力。
 
-## 技术架构
+## 当前架构
 
 ```
-抢购请求 → Redis 库存扣减 → MQ 消息 → 订单落库
+用户请求 → Redis 库存扣减 → DB 订单落库
 ```
 
-## 核心设计思路
+## 现有问题（百万级需升级）
 
-### 1. 库存预热
+| 问题 | 现状 | 百万级要求 |
+|------|------|-----------|
+| 并发锁 | Redisson 分布式锁（串行） | Lua 原子脚本 |
+| 订单落库 | 直落 DB（同步阻塞） | MQ 异步 + 批量落库 |
+| 限流 | 无 | Sentinel / 令牌桶 |
+| 热点缓存 | 无 | 本地 Caffeine |
+
+## 现有代码
+
+### 1. 分布式锁扣库存
 
 ```java
-// 活动开始前，将库存加载到 Redis
-@PostConstruct
-public void warmUp() {
-    Long stock = db.getStock(skuId);
-    redis.set("sku:stock:" + skuId, stock);
+// SeckillService.java
+String lockKey = "seckill:lock:" + skuId;
+RLock lock = redissonClient.getLock(lockKey);
+lock.tryLock(3, 10, TimeUnit.SECONDS);  // 获取锁
+
+String stockKey = "sku:stock:" + skuId;
+Long stock = redisTemplate.opsForValue().decrement(stockKey, quantity);
+if (stock < 0) {
+    redisTemplate.opsForValue().increment(stockKey, quantity);
+    return "商品已抢完";
 }
 ```
 
-### 2. Lua 原子操作（核心）
+### 2. 流程图
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   分布式锁   │───▶│ Redis扣减  │───▶│  订单落库  │
+│  Redisson   │    │  库存判断  │    │  MySQL直落  │
+└─────────────┘    └─────────────┘    └─────────────┘
+```
+
+## 升级方向（百万级）
+
+### 1. Lua 原子扣库存（替代分布式锁）
 
 ```lua
--- Lua 脚本保证原子性，避免并发问题
-local stock = redis.call('GET', KEYS[1])
-if not stock or tonumber(stock) < 1 then
-    return -2  -- 库存不足
+-- stock.lua
+local stockKey = KEYS[1]
+local userKey = KEYS[2]
+local quantity = tonumber(ARGV[1])
+
+local stock = redis.call('GET', stockKey)
+if not stock or tonumber(stock) < quantity then
+    return -1  -- 库存不足
 end
-if redis.call('EXISTS', KEYS[2]) > 0 then
-    return -1  -- 已抢购
+if redis.call('EXISTS', userKey) > 0 then
+    return -2  -- 已抢购
 end
-redis.call('DECRBY', KEYS[1], 1)
-redis.call('SET', KEYS[2], 1, 'EX', 86400)
+
+redis.call('DECRBY', stockKey, quantity)
+redis.call('SET', userKey, quantity, 'EX', 86400)
 return 1  -- 成功
 ```
 
-### 3. RocketMQ 异步落库
+优势：无锁，O(1) 原子操作，吞吐量提升 10x+
+
+### 2. 异步 MQ 削峰
 
 ```java
-// 抢购成功，发送 MQ 消息
+// 抢购成功后发送 MQ，不阻塞
 rocketMQTemplate.convertAndSend("seckill-order", orderMessage);
 
-// 消费者监听并落库
-@RocketMQMessageListener(topic = "seckill-order", consumerGroup = "seckill-consumer")
-public class OrderConsumer implements RocketMQListener<OrderMessage> {
-    orderRepository.save(order);  // 落库
+// 消费者异步落库
+@RocketMQMessageListener(topic = "seckill-order")
+public class OrderConsumer {
+    orderMapper.insert(order);  // 批量落库
 }
 ```
 
-### 4. 流程图
+### 3. 限流（Sentinel）
 
+```java
+@SentinelResource(value = "seckill", blockHandler = "blockHandler")
+public Result seckill(SeckillRequest request) {
+    // 限流规则
+    // 每秒 10000 通过，其余拒绝
+}
 ```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   用户请求   │───▶│  Lua 扣减   │───▶│  MQ 消息   │───▶│  订单落库  │
-│             │    │   库存     │    │   异步     │    │   MySQL    │
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+
+### 4. 本地热点缓存
+
+```java
+@Cacheable(value = "hotSku", key = "#skuId")
+public SkuInfo getSkuInfo(Long skuId) {
+    return redisTemplate.opsForValue().get("sku:" + skuId);
+}
 ```
+
+## 完整升级架构
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      Load Balancer                      │
+│                      CDN / Nginx                       │
+│                  静态资源 + IP 限流                    │
 └─────────────────────────────────────────────────────────┘
                               │
-          ┌───────────────────┼───────────────────┐
-          ▼                   ▼                   ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│   Gateway /     │ │   Gateway /     │ │   Gateway /     │
-│   Nginx         │ │   Nginx         │ │   Nginx         │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
-          │                   │                   │
-          └───────────────────┼───────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────┐
+│                     API Gateway                       │
+│              限流 + 路由 + 签名校验                    │
+└─────────────────────────────────────────────────────────┘
+                              │
                               ▼
 ┌─────────────────────────────────────────────────────────┐
 │              Spring Boot 集群 (多实例)                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │  Instance 1  │  │  Instance 2  │  │  Instance N  │ │
+│  │  本地缓存   │  │  本地缓存   │  │  本地缓存   │ │
+│  │ Caffeine   │  │ Caffeine   │  │ Caffeine   │ │
 │  └──────────────┘  └──────────────┘  └──────────────┘ │
+└─────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+        ┌──────────┐   ┌──────────┐   ┌──────────┐
+        │  Lua脚本  │   │  Lua脚本  │   │  Lua脚本  │
+        │  库存扣减 │   │  库存扣减 │   │  库存扣减 │
+        └──────────┘   └──────────┘   └──────────┘
+              │               │               │
+              └───────────────┼───────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────┐
+│                    Redis Cluster                        │
+│              库存预热 + Lua 原子操作                     │
 └─────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────┐
-│                    Redis 集群                          │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐   │
-│  │ Master │──│ Master │──│ Master │──│ Master │   │
-│  │ Node 1 │  │ Node 2 │  │ Node 3 │  │ Node N │   │
-│  └─────────┘  └─────────┘  └─────────┘  └─────────┘   │
-│       │            │            │                      │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐                │
-│  │ Replica │  │ Replica │  │ Replica │                │
-│  └─────────┘  └─────────┘  └─────────┘                │
+│                   RocketMQ                            │
+│              异步订单消息 → 批量落库                    │
 └─────────────────────────────────────────────────────────┘
                               │
                               ▼
-┌───────────────────────────��─────────────────────────────┐
-│                mysql (异步落库)                         │
-│         Order Service 异步写入订单                      │
+┌─────────────────────────────────────────────────────────┐
+│                 MySQL 集群 (分库分表)                 │
+│              订单异步写入 + 最终一致性                  │
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 核心设计思路
-
-### 1. 库存预热
-
-```java
-// 活动开始前，将库存加载到 Redis
-// 缓存 miss 时从数据库加载
-@PostConstruct
-public void warmUp() {
-    Long stock = db.getStock(skuId);
-    redis.set("sku:stock:" + skuId, stock);
-}
-```
-
-### 2. 内存标记 + 限流
-
-```
-                           ┌──────────────────┐
-                           │   IP 限流 (每 IP  │
-                           │   100 QPS)       │
-                           └────────┬─────────┘
-                                    │
-                                    ▼
-┌──────────────────┐      ┌──────────────────┐
-│  活动未开始 (false)│─────▶│ 活动已开始 (true) │
-│  直接返回         │      └────────┬─────────┘
-└──────────────────┘               │
-                                   ▼
-                         ┌──────────────────┐
-                         │   Lua 原子扣减   │
-                         │   库存 - 1      │
-                         │   用户标记      │
-                         └────────┬─────────┘
-                                  │
-                                  ▼
-                         ┌──────────────────┐
-                         │   异步创建订单   │
-                         │   到 MySQL        │
-                         └──────────────────┘
-```
-
-### 3. Lua 原子操作（核心）
-
-```lua
--- Lua 脚本保证原子性，避免并发问题
-local stock = redis.call('GET', KEYS[1])
-if not stock or tonumber(stock) < 1 then
-    return -2  -- 库存不足
-end
-if redis.call('EXISTS', KEYS[2]) > 0 then
-    return -1  -- 已抢购
-end
-redis.call('DECRBY', KEYS[1], 1)
-redis.call('SET', KEYS[2], 1, 'EX', 86400)
-return 1  -- 成功
-```
-
-### 4. 异步下单
-
-```java
-@Async
-public Future<Order> createOrderAsync(SeckillRequest request) {
-    // 异步写入订单，不阻塞主流程
-    Order order = Order.builder()
-        .userId(request.getUserId())
-        .skuId(request.getSkuId())
-        .status("PENDING")
-        .build();
-    return orderRepository.saveAsync(order);
-}
-```
-
-### 5. 限流策略
-
-| 层级 | 方式 | 说明 |
-|------|------|------|
-| **网关层** | Nginx 限流 | 每个 IP 100 QPS |
-| **应用层** | Sentinel / RateLimiter | 接口限流 |
-| **Redis 层** | Lua 脚本 | 库存原子扣减 |
-
-## 高性能优化
-
-### 关键配置
+## 关键配置
 
 ```yaml
 server:
   tomcat:
     threads:
-      max: 500          # 增大线程池
-      min-spare: 100   # 最小空闲线程
-    accept-count: 200  # 排队队列
+      max: 800          # 增大线程池
+      min-spare: 200   # 最小空闲
+    accept-count: 500  # 排队队列
 
 spring:
   data:
@@ -202,13 +171,13 @@ spring:
           min-idle: 50    # 最小空闲
 ```
 
-### 性能指标
+## 性能目标
 
-| 指标 | 目标值 | 说明 |
-|------|--------|------|
-| TPS | 100,000 | 每秒处理请求数 |
-| P99 延迟 | < 50ms | 99% 请求响应时间 |
-| 库存准确性 | 100% | 不超卖 |
+| 指标 | 基础版 | 百万级版 |
+|------|--------|----------|
+| QPS | 1,000 | 100,000+ |
+| 延迟 | 50ms | < 20ms |
+| 库存准确性 | 100% | 100% |
 
 ## API
 
@@ -232,6 +201,7 @@ POST /api/seckill
 | 200 | 抢购成功 |
 | 400 | 已抢购过 |
 | 402 | 商品已抢完 |
+| 429 | 请求过于频繁 |
 | 500 | 系统错误 |
 
 ## 压测
@@ -244,9 +214,10 @@ wrk -t10 -c100 -d10s -p10 \
   -d '{"userId": 123, "skuId": 1, "quantity": 1}'
 ```
 
-## 扩展思路
+## 待完成
 
-1. **多 SKU 限购** - Lua 脚本支持多商品
-2. **排队机制** - 使用 Redis Stream 实现排队
-3. **熔断降级** - Sentinel 熔断保护
-4. **分库分表** - 用户 ID 哈希分表
+- [ ] Lua 原子扣库存脚本
+- [ ] RocketMQ 异步落库
+- [ ] Sentinel 限流
+- [ ] 本地热点缓存
+- [ ] 批量落库优化

@@ -8,6 +8,7 @@ public final class GlobalConstants {
     // Redis keys (带Hash Tag解决集群问题)
     public static final String SKU_STOCK_KEY = "{seckill}:stock:";
     public static final String USER_BUY_KEY = "{seckill}:user:";
+    public static final String SKU_USER_BUY_KEY = "{seckill}:buy:";
     public static final String ACTIVITY_KEY = "{seckill}:activity:";
 
     // Lua script for atomic stock deduction
